@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout</title>
+    <link rel="stylesheet" href="checkout.css" />
+  </head>
+  <body>
+    <div class="checkout-container">
+      <h1>Checkout</h1>
+      <p id="empty-message" class="empty-message" style="display: none">
+        Nenhum item adicionado.
+      </p>
+      <ul class="product-list" id="product-list">
+      </ul>
+      <div class="checkout-buttons">
+        <p class="total" id="total"></p>
+        <a id="whatsapp-button" class="finalize" href="#" target="_blank"
+          >Finalizar Pedido</a
+        >
+        <a
+          href="index.html"
+          id="back-button"
+          class="back-button"
+          style="display: none"
+          >Adicionar Itens</a
+        >
+            </div>
+      </div>
+
+
+    <script>
+      // Parse query string to retrieve product data
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+
+      const productList = document.getElementById("product-list");
+      const totalElement = document.getElementById("total");
+      const whatsappButton = document.getElementById("whatsapp-button");
+      const emptyMessage = document.getElementById("empty-message");
+      const backButton = document.getElementById("back-button");
+
+      let productMap = new Map();
+      let total = 0;
+
+      // Process the 'product' parameters from the URL
+      urlParams.forEach((value, key) => {
+        if (key === "product") {
+          const [name, price] = value.split(":");
+          const productPrice = parseFloat(price);
+
+          if (!isNaN(productPrice)) {
+            if (productMap.has(name)) {
+              const existingProduct = productMap.get(name);
+              existingProduct.quantity += 1;
+              productMap.set(name, existingProduct);
+            } else {
+              productMap.set(name, { price: productPrice, quantity: 1 });
+            }
+          }
+        }
+      });
+
+      // Function to update the quantity of a product
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+      function changeQuantity(name, change) {
+        const product = cart.find((item) => item.name === name);
+        if (product) {
+          product.quantity += change;
+          if (product.quantity < 1) {
+            product.quantity = 1;
+          }
+          localStorage.setItem("cart", JSON.stringify(cart)); // Salvar no localStorage
+          renderProducts();
+        }
+      }
+
+      function removeItem(name) {
+        const index = cart.findIndex((item) => item.name === name);
+        if (index !== -1) {
+          cart.splice(index, 1);
+          localStorage.setItem("cart", JSON.stringify(cart)); // Atualizar no localStorage
+          renderProducts();
+        }
+      }
+
+      function renderProducts() {
+        const productList = document.getElementById("product-list");
+        const totalElement = document.getElementById("total");
+        productList.innerHTML = "";
+        let total = 0; // Mover o cálculo do total aqui
+        let hasItems = false;
+
+        cart.forEach((product) => {
+          if (product.quantity > 0) {
+            hasItems = true;
+            const productTotal = product.price * product.quantity;
+            total += productTotal; // Atualizar o total
+            const productItem = document.createElement("li");
+            productItem.innerHTML = `<div class="products-info">
+              <span>${
+                product.name
+              } </span><span>R$${productTotal.toFixed(2)}</span>
+            </div>
+
+<div class="actions">
+<div class="adicionar-remover">
+<button class="remove" onclick="changeQuantity('${
+              product.name
+            }', -1)">-</button>
+<div>x${product.quantity}</div>
+<button class="add" onclick="changeQuantity('${product.name}', 1)">+</button>
+</div>
+
+<button class="remove" onclick="removeItem('${
+              product.name
+            }')">
+    <img src="trash.svg" alt="Remover item"></button>
+</div>`;
+            productList.appendChild(productItem);
+          }
+        });
+
+        totalElement.textContent = `Total: R$${total.toFixed(2)}`;
+
+        // Verificar se há itens no carrinho
+        if (hasItems) {
+          document.getElementById("empty-message").style.display = "none";
+          document.getElementById("back-button").style.display = "block";
+          document
+            .getElementById("whatsapp-button")
+            .classList.remove("disabled");
+        } else {
+          showEmptyState();
+          document.getElementById("whatsapp-button").classList.add("disabled");
+        }
+
+        updateWhatsAppLink(total); // Passar o total atualizado para o WhatsApp
+      }
+
+      function showEmptyState() {
+        document.getElementById("product-list").innerHTML = "";
+        document.getElementById("total").textContent = "";
+        document.getElementById("empty-message").style.display = "block";
+        document.getElementById("back-button").style.display = "block";
+      }
+
+      function updateWhatsAppLink(total) {
+        const whatsappNumber = "5511920182636";
+        let productListMessage = "";
+
+        cart.forEach((product) => {
+          if (product.quantity > 0) {
+            productListMessage += `- ${product.name} x${product.quantity}%0A`;
+          }
+        });
+
+        const whatsappMessage = `Olá meu pedido é esse:%0A${productListMessage}Total: R$${total.toFixed(
+          2
+        )}`;
+        const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+        document.getElementById("whatsapp-button").href = whatsappLink;
+      }
+
+      document.addEventListener("DOMContentLoaded", renderProducts);
+    </script>
+  </body>
+</html>
